@@ -10,6 +10,9 @@ import {
 import path from "path";
 
 describe("Fullscreen break", () => {
+  const appUrl = "http://localhost:3000";
+  const preloadPath = path.join(__dirname, "../../preload.js");
+
   const getWindowSpies = (window: BrowserWindow) => {
     return {
       show: jest.spyOn(window, "show"),
@@ -52,6 +55,9 @@ describe("Fullscreen break", () => {
         isFullscreen: fullscreenState.isFullscreen,
         trayTooltip,
         tray,
+        overlayWindows: undefined,
+        appUrl,
+        preloadPath,
       }
     );
 
@@ -109,6 +115,9 @@ describe("Fullscreen break", () => {
         isFullscreen: fullscreenState.isFullscreen,
         trayTooltip,
         tray,
+        overlayWindows: undefined,
+        appUrl,
+        preloadPath,
       }
     );
 
@@ -173,6 +182,8 @@ describe("Fullscreen break", () => {
         trayTooltip,
         tray,
         overlayWindows,
+        appUrl,
+        preloadPath,
       }
     );
 
@@ -192,6 +203,8 @@ describe("Fullscreen break", () => {
         trayTooltip,
         tray,
         overlayWindows,
+        appUrl,
+        preloadPath,
       }
     );
 

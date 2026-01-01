@@ -54,6 +54,10 @@ import WindowsToaster from "node-notifier/notifiers/toaster";
 import NotificationCenter from "node-notifier/notifiers/notificationcenter";
 
 const onProduction = app.isPackaged;
+const appUrl = !onProduction
+  ? "http://localhost:3000"
+  : `file://${path.join(__dirname, "index.html")}`;
+const preloadPath = path.join(__dirname, "preload.js");
 
 const notificationIcon = path.join(
   __dirname,
@@ -107,7 +111,7 @@ function createMainWindow() {
     webPreferences: {
       contextIsolation: true,
       backgroundThrottling: false,
-      preload: path.join(__dirname, "preload.js"),
+      preload: preloadPath,
     },
   });
 
@@ -119,11 +123,7 @@ function createMainWindow() {
     return { action: "deny" };
   });
 
-  win.loadURL(
-    !onProduction
-      ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "index.html")}`
-  );
+  win.loadURL(appUrl);
 
   win.once("ready-to-show", () => {
     win?.show();
@@ -431,6 +431,8 @@ ipcMain.on(SET_FULLSCREEN_BREAK, (e, args) => {
     contextMenu,
     isFullscreen: windowState.isFullscreen,
     overlayWindows,
+    appUrl,
+    preloadPath,
   });
 });
 

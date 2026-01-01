@@ -326,37 +326,34 @@ const FeatureSection: React.FC = () => {
           />
         )
       )}
-      <StyledMonitorWrapper>
-        <StyledMonitorHeader>
-          <span>Fullscreen Break Monitors</span>
-          {monitorSelectionDisabled && (
-            <StyledMonitorHint>Disabled</StyledMonitorHint>
+      {settings.enableFullscreenBreak && (
+        <StyledMonitorWrapper>
+          <StyledMonitorHeader>
+            <span>Fullscreen Break Monitors</span>
+            {monitorSelectionDisabled && (
+              <StyledMonitorHint>Disabled</StyledMonitorHint>
+            )}
+          </StyledMonitorHeader>
+          {monitorOptions.length ? (
+            <StyledMonitorList aria-disabled={monitorSelectionDisabled}>
+              {monitorOptions.map((monitor) => (
+                <Checkbox
+                  key={monitor.id}
+                  id={`fullscreen-monitor-${monitor.id}`}
+                  label={monitor.label}
+                  checked={settings.fullscreenBreakMonitors.includes(
+                    monitor.id
+                  )}
+                  disabled={monitorSelectionDisabled}
+                  onChange={() => onToggleMonitor(monitor.id)}
+                />
+              ))}
+            </StyledMonitorList>
+          ) : (
+            <StyledMonitorHint>No monitors detected.</StyledMonitorHint>
           )}
-        </StyledMonitorHeader>
-        {monitorOptions.length ? (
-          <StyledMonitorList aria-disabled={monitorSelectionDisabled}>
-            {monitorOptions.map((monitor) => (
-              <Checkbox
-                key={monitor.id}
-                id={`fullscreen-monitor-${monitor.id}`}
-                label={monitor.label}
-                checked={settings.fullscreenBreakMonitors.includes(
-                  monitor.id
-                )}
-                disabled={monitorSelectionDisabled}
-                onChange={() => onToggleMonitor(monitor.id)}
-              />
-            ))}
-          </StyledMonitorList>
-        ) : (
-          <StyledMonitorHint>No monitors detected.</StyledMonitorHint>
-        )}
-        {!settings.enableFullscreenBreak && (
-          <StyledMonitorHint>
-            Enable Fullscreen Break to configure monitor coverage.
-          </StyledMonitorHint>
-        )}
-      </StyledMonitorWrapper>
+        </StyledMonitorWrapper>
+      )}
       <Collapse>
         <Radio
           id="none"

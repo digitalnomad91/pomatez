@@ -21,6 +21,8 @@ type AppArgs = {
   contextMenu: Menu;
   isFullscreen: FullscreenState["isFullscreen"];
   overlayWindows?: Map<number, BrowserWindow>;
+  appUrl: string;
+  preloadPath: string;
 };
 
 const setFullScreen = (
@@ -52,7 +54,9 @@ const syncOverlayWindows = (
   displays: Display[],
   mainWindowDisplayId: number | undefined,
   alwaysOnTop: boolean,
-  overlays?: Map<number, BrowserWindow>
+  overlays: Map<number, BrowserWindow> | undefined,
+  appUrl: string,
+  preloadPath: string
 ) => {
   if (!overlays) return;
 
@@ -90,7 +94,8 @@ const syncOverlayWindows = (
       backgroundColor: "#0b1d30",
       webPreferences: {
         contextIsolation: true,
-        nodeIntegration: false,
+        backgroundThrottling: false,
+        preload: preloadPath,
       },
     });
 
@@ -99,11 +104,12 @@ const syncOverlayWindows = (
     overlay.setFullScreen(true);
     overlay.setVisibleOnAllWorkspaces(true);
 
-    const html = encodeURIComponent(
-      `<style>body{margin:0;padding:0;background:#0b1d30;color:#fff;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:24px;letter-spacing:0.02em;}</style><div>Break in progress</div>`
-    );
+    const overlayUrl =
+      appUrl.indexOf("?") > -1
+        ? `${appUrl}&overlay=1`
+        : `${appUrl}?overlay=1`;
 
-    overlay.loadURL(`data:text/html;charset=utf-8,${html}`);
+    overlay.loadURL(overlayUrl);
     overlay.once("ready-to-show", () => overlay.show());
 
     overlays.set(display.id, overlay);
@@ -121,8 +127,16 @@ export const setFullscreenBreakHandler = (
   appArgs: AppArgs
 ) => {
   const { shouldFullscreen, alwaysOnTop } = fullscreenArgs;
-  const { tray, trayTooltip, win, contextMenu, isFullscreen, overlayWindows } =
-    appArgs;
+  const {
+    tray,
+    trayTooltip,
+    win,
+    contextMenu,
+    isFullscreen,
+    overlayWindows,
+    appUrl,
+    preloadPath,
+  } = appArgs;
 
   const availableDisplays = screen.getAllDisplays();
   const currentDisplay =
@@ -178,7 +192,9 @@ export const setFullscreenBreakHandler = (
       resolvedTargets,
       primaryDisplay?.id,
       alwaysOnTop,
-      overlayWindows
+      overlayWindows,
+      appUrl,
+      preloadPath
     );
   } else {
     setFullScreen(false, alwaysOnTop, win, isFullscreen);

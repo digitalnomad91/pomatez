@@ -15,11 +15,18 @@ export type ConnectorProps = {
   openExternalCallback?: () => void;
 };
 
+const isOverlayWindow =
+  typeof window !== "undefined" &&
+  window.location.search.includes("overlay=1");
+
 export const ConnnectorContext = React.createContext<ConnectorProps>(
   {}
 );
 
 export function getInvokeConnector() {
+  if (isOverlayWindow) {
+    return undefined;
+  }
   if (isElectron()) {
     return ElectronInvokeConnector;
   } else if (window.__TAURI__) {
@@ -29,6 +36,10 @@ export function getInvokeConnector() {
 }
 
 export const ConnectorProvider: React.FC = ({ children }) => {
+  if (isOverlayWindow) {
+    return <>{children}</>;
+  }
+
   let Connector: React.FC<ConnectorProps> = () => <>{children}</>;
   if (isElectron()) {
     Connector = ElectronConnectorProvider;

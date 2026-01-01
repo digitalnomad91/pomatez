@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import useStayAwake from "use-stay-awake";
 import { setPlay, setRound, setTimerType } from "store";
 import { useNotification } from "hooks";
@@ -22,6 +22,10 @@ type CounterProps = {
   resetTimerAction?: () => void;
   shouldFullscreen?: boolean;
 };
+
+const isOverlayWindow =
+  typeof window !== "undefined" &&
+  window.location.search.includes("overlay=1");
 
 const CounterContext = React.createContext<CounterProps>({
   count: 0,
@@ -49,6 +53,18 @@ const CounterProvider: React.FC = ({ children }) => {
   );
 
   const [shouldFullscreen, setShouldFullscreen] = useState(false);
+  const [overlayState, setOverlayState] = useState<{
+    count: number;
+    duration: number;
+    timerType: TimerStatus;
+    shouldFullscreen: boolean;
+  }>({
+    count: 0,
+    duration: 0,
+    timerType: timer.timerType,
+    shouldFullscreen: false,
+  });
+  const broadcastRef = useRef<BroadcastChannel | null>(null);
 
   const [count, setCount] = useState(config.stayFocus * 60);
   const [lastCountTime, setLastCountTime] = useState(Date.now());
@@ -69,6 +85,35 @@ const CounterProvider: React.FC = ({ children }) => {
       setHasNotified60Seconds(false);
     }
     setHasNotifiedBreak(false);
+  }, []);
+
+  useEffect(() => {
+    broadcastRef.current = new BroadcastChannel("pomatez-fullscreen");
+    return () => {
+      broadcastRef.current?.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOverlayWindow) return;
+    const handler = (event: MessageEvent) => {
+      const payload = event.data as {
+        count?: number;
+        duration?: number;
+        timerType?: TimerStatus;
+        shouldFullscreen?: boolean;
+      };
+      setOverlayState((prev) => ({
+        count: payload.count ?? prev.count,
+        duration: payload.duration ?? prev.duration,
+        timerType: payload.timerType ?? prev.timerType,
+        shouldFullscreen: payload.shouldFullscreen ?? prev.shouldFullscreen,
+      }));
+    };
+    broadcastRef.current?.addEventListener("message", handler);
+    return () => {
+      broadcastRef.current?.removeEventListener("message", handler);
+    };
   }, []);
 
   // @ts-expect-error
@@ -433,14 +478,37 @@ const CounterProvider: React.FC = ({ children }) => {
     }
   }, [settings.enableFullscreenBreak, timer.timerType]);
 
+  useEffect(() => {
+    if (isOverlayWindow) return;
+    broadcastRef.current?.postMessage({
+      count: Math.ceil(count),
+      duration,
+      timerType: timer.timerType,
+      shouldFullscreen,
+    });
+  }, [count, duration, shouldFullscreen, timer.timerType]);
+
+  const effectiveCount = isOverlayWindow
+    ? overlayState.count || Math.ceil(count)
+    : Math.ceil(count);
+  const effectiveDuration = isOverlayWindow
+    ? overlayState.duration || duration
+    : duration;
+  const effectiveTimerType = isOverlayWindow
+    ? overlayState.timerType || timer.timerType
+    : timer.timerType;
+  const effectiveShouldFullscreen = isOverlayWindow
+    ? overlayState.shouldFullscreen
+    : shouldFullscreen;
+
   return (
     <CounterContext.Provider
       value={{
-        count: Math.ceil(count),
-        duration,
+        count: effectiveCount,
+        duration: effectiveDuration,
         resetTimerAction,
-        shouldFullscreen,
-        timerType: timer.timerType,
+        shouldFullscreen: effectiveShouldFullscreen,
+        timerType: effectiveTimerType,
       }}
     >
       {children}
