@@ -2,7 +2,7 @@ import {
   activateFullScreenShortcuts,
   deactivateFullScreenShortcuts,
 } from "../helpers";
-import { BrowserWindow, Menu, Tray } from "electron";
+import { BrowserWindow, Menu, Tray, screen, Display } from "electron";
 
 export type FullscreenState = {
   isFullscreen: boolean;
@@ -11,6 +11,7 @@ export type FullscreenState = {
 type FullscreenArgs = {
   shouldFullscreen: boolean;
   alwaysOnTop: boolean;
+  displayIds?: number[];
 };
 
 type AppArgs = {
@@ -19,7 +20,13 @@ type AppArgs = {
   win: BrowserWindow | null;
   contextMenu: Menu;
   isFullscreen: FullscreenState["isFullscreen"];
+  overlayWindows?: Map<number, BrowserWindow>;
+  appUrl: string;
+  preloadPath: string;
 };
+
+let previousBounds: Electron.Rectangle | null = null;
+let previousResizable: boolean | null = null;
 
 const setFullScreen = (
   flag: boolean,
@@ -32,12 +39,86 @@ const setFullScreen = (
   }
   win?.setFullScreenable(true);
   win?.setAlwaysOnTop(alwaysOnTop, "screen-saver");
+  win?.setSkipTaskbar(flag);
   win?.setFullScreen(flag);
   win?.setVisibleOnAllWorkspaces(flag);
   win?.show();
   win?.focus();
 
   isFullscreen = flag;
+};
+
+const closeOverlayWindows = (overlays?: Map<number, BrowserWindow>) => {
+  overlays?.forEach((overlay) => {
+    overlay.close();
+  });
+  overlays?.clear();
+};
+
+const syncOverlayWindows = (
+  displays: Display[],
+  mainWindowDisplayId: number | undefined,
+  alwaysOnTop: boolean,
+  overlays: Map<number, BrowserWindow> | undefined,
+  appUrl: string,
+  preloadPath: string
+) => {
+  if (!overlays) return;
+
+  const targetIds = displays.map((display) => display.id);
+
+  overlays.forEach((overlay, id) => {
+    if (!targetIds.includes(id)) {
+      overlay.close();
+      overlays.delete(id);
+    }
+  });
+
+  displays.forEach((display) => {
+    if (display.id === mainWindowDisplayId) return;
+
+    if (overlays.has(display.id)) {
+      overlays.get(display.id)?.setAlwaysOnTop(alwaysOnTop, "screen-saver");
+      return;
+    }
+
+    const overlay = new BrowserWindow({
+      x: display.bounds.x,
+      y: display.bounds.y,
+      width: display.bounds.width,
+      height: display.bounds.height,
+      frame: false,
+      resizable: false,
+      movable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreen: true,
+      skipTaskbar: true,
+      focusable: false,
+      show: false,
+      backgroundColor: "#0b1d30",
+      webPreferences: {
+        contextIsolation: true,
+        backgroundThrottling: false,
+        preload: preloadPath,
+      },
+    });
+
+    overlay.setFullScreenable(true);
+    overlay.setAlwaysOnTop(alwaysOnTop, "screen-saver");
+    overlay.setFullScreen(true);
+    overlay.setVisibleOnAllWorkspaces(true);
+
+    const overlayUrl =
+      appUrl.indexOf("?") > -1
+        ? `${appUrl}&overlay=1`
+        : `${appUrl}?overlay=1`;
+
+    overlay.loadURL(overlayUrl);
+    overlay.once("ready-to-show", () => overlay.show());
+
+    overlays.set(display.id, overlay);
+  });
 };
 
 /**
@@ -51,9 +132,56 @@ export const setFullscreenBreakHandler = (
   appArgs: AppArgs
 ) => {
   const { shouldFullscreen, alwaysOnTop } = fullscreenArgs;
-  const { tray, trayTooltip, win, contextMenu, isFullscreen } = appArgs;
+  const {
+    tray,
+    trayTooltip,
+    win,
+    contextMenu,
+    isFullscreen,
+    overlayWindows,
+    appUrl,
+    preloadPath,
+  } = appArgs;
 
+  const availableDisplays = screen.getAllDisplays();
+  const currentDisplay =
+    win && availableDisplays.length
+      ? screen.getDisplayMatching(win.getBounds())
+      : undefined;
+
+  const targetDisplays =
+    fullscreenArgs.displayIds && fullscreenArgs.displayIds.length
+      ? availableDisplays.filter((display) =>
+          fullscreenArgs.displayIds?.includes(display.id)
+        )
+      : currentDisplay
+      ? [currentDisplay]
+      : availableDisplays.length
+      ? [availableDisplays[0]]
+      : [];
+
+  const resolvedTargets =
+    targetDisplays.length > 0
+      ? targetDisplays
+      : currentDisplay
+      ? [currentDisplay]
+      : availableDisplays.length
+      ? [availableDisplays[0]]
+      : [];
+
+  const primaryDisplay = resolvedTargets[0];
   if (shouldFullscreen) {
+    if (win) {
+      previousBounds = win.getBounds();
+      previousResizable = win.isResizable();
+      if (
+        primaryDisplay &&
+        (!currentDisplay || primaryDisplay.id !== currentDisplay.id)
+      ) {
+        win.setBounds(primaryDisplay.bounds);
+      }
+    }
+
     setFullScreen(true, alwaysOnTop, win, isFullscreen);
 
     activateFullScreenShortcuts(() => {});
@@ -66,8 +194,24 @@ export const setFullscreenBreakHandler = (
         },
       ])
     );
+
+    syncOverlayWindows(
+      resolvedTargets,
+      primaryDisplay?.id,
+      alwaysOnTop,
+      overlayWindows,
+      appUrl,
+      preloadPath
+    );
   } else {
     setFullScreen(false, alwaysOnTop, win, isFullscreen);
+    closeOverlayWindows(overlayWindows);
+    if (win) {
+      if (previousBounds) {
+        win.setBounds(previousBounds);
+      }
+      win.setResizable(previousResizable ?? true);
+    }
 
     deactivateFullScreenShortcuts();
     tray?.setToolTip(trayTooltip);

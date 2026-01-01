@@ -87,6 +87,13 @@ const settingsSlice = createSlice({
       state.enableFullscreenBreak = action.payload;
     },
 
+    setFullscreenBreakMonitors(
+      state,
+      action: SettingsPayload<"fullscreenBreakMonitors">
+    ) {
+      state.fullscreenBreakMonitors = action.payload;
+    },
+
     setEnableStrictMode(
       state,
       action: SettingsPayload<"enableStrictMode">
@@ -163,6 +170,7 @@ export const {
   setEnableDarkTheme,
   setFollowSystemTheme,
   setEnableFullscreenBreak,
+  setFullscreenBreakMonitors,
   setEnableProgressAnimation,
   setEnableStrictMode,
   setEnableVoiceAssistance,

@@ -87,8 +87,14 @@ export const ElectronConnectorProvider: React.FC = ({ children }) => {
     electron.send(SET_FULLSCREEN_BREAK, {
       shouldFullscreen,
       alwaysOnTop: settings.alwaysOnTop,
+      displayIds: settings.fullscreenBreakMonitors,
     });
-  }, [electron, settings.alwaysOnTop, shouldFullscreen]);
+  }, [
+    electron,
+    settings.alwaysOnTop,
+    settings.fullscreenBreakMonitors,
+    shouldFullscreen,
+  ]);
 
   useEffect(() => {
     electron.send(SET_COMPACT_MODE, {

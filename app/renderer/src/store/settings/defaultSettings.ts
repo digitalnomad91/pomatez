@@ -6,6 +6,7 @@ export const defaultSettings: Readonly<SettingTypes> = Object.freeze({
   compactMode: false,
   ignoreUpdate: "",
   enableFullscreenBreak: false,
+  fullscreenBreakMonitors: [],
   enableStrictMode: false,
   enableDarkTheme: isPreferredDark(),
   followSystemTheme: true,

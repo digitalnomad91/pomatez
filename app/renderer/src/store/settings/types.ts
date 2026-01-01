@@ -5,6 +5,7 @@ export type SettingTypes = {
   alwaysOnTop: boolean;
   compactMode: boolean;
   enableFullscreenBreak: boolean;
+  fullscreenBreakMonitors: number[];
   enableDarkTheme: boolean;
   followSystemTheme: boolean;
   enableStrictMode: boolean;

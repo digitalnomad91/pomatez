@@ -8,6 +8,7 @@ import {
   shell,
   nativeImage,
   dialog,
+  screen,
 } from "electron";
 import debounce from "lodash.debounce";
 import notifier from "node-notifier";
@@ -20,6 +21,8 @@ import {
   SET_UI_THEME,
   SET_NATIVE_TITLEBAR,
   SHOW_WINDOW,
+  GET_DISPLAYS,
+  AVAILABLE_DISPLAYS,
   RELEASE_NOTES_LINK,
   TRAY_ICON_UPDATE,
   SET_COMPACT_MODE,
@@ -51,6 +54,10 @@ import WindowsToaster from "node-notifier/notifiers/toaster";
 import NotificationCenter from "node-notifier/notifiers/notificationcenter";
 
 const onProduction = app.isPackaged;
+const appUrl = !onProduction
+  ? "http://localhost:3000"
+  : `file://${path.join(__dirname, "index.html")}`;
+const preloadPath = path.join(__dirname, "preload.js");
 
 const notificationIcon = path.join(
   __dirname,
@@ -80,6 +87,7 @@ const getFrameHeight = () => {
 let tray: Tray | null = null;
 
 let win: BrowserWindow | null;
+const overlayWindows = new Map<number, BrowserWindow>();
 
 type WindowStateProps = {
   isOnCompactMode: boolean;
@@ -103,7 +111,7 @@ function createMainWindow() {
     webPreferences: {
       contextIsolation: true,
       backgroundThrottling: false,
-      preload: path.join(__dirname, "preload.js"),
+      preload: preloadPath,
     },
   });
 
@@ -115,11 +123,7 @@ function createMainWindow() {
     return { action: "deny" };
   });
 
-  win.loadURL(
-    !onProduction
-      ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "index.html")}`
-  );
+  win.loadURL(appUrl);
 
   win.once("ready-to-show", () => {
     win?.show();
@@ -407,6 +411,18 @@ ipcMain.on(SET_ALWAYS_ON_TOP, (e, { alwaysOnTop }) => {
   win?.setAlwaysOnTop(alwaysOnTop);
 });
 
+ipcMain.on(GET_DISPLAYS, (event) => {
+  const displays = screen.getAllDisplays().map((display, index) => {
+    const size = (display as any).size || display.bounds;
+    return {
+      id: display.id,
+      label: `Display ${index + 1} (${size.width}x${size.height})`,
+    };
+  });
+
+  event.sender.send(AVAILABLE_DISPLAYS, displays);
+});
+
 ipcMain.on(SET_FULLSCREEN_BREAK, (e, args) => {
   setFullscreenBreakHandler(args, {
     win,
@@ -414,6 +430,9 @@ ipcMain.on(SET_FULLSCREEN_BREAK, (e, args) => {
     trayTooltip,
     contextMenu,
     isFullscreen: windowState.isFullscreen,
+    overlayWindows,
+    appUrl,
+    preloadPath,
   });
 });
 
