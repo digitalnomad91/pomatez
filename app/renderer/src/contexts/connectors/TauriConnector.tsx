@@ -149,8 +149,14 @@ export const TauriConnectorProvider: React.FC = ({ children }) => {
     send(SET_FULLSCREEN_BREAK, {
       shouldFullscreen,
       alwaysOnTop: settings.alwaysOnTop,
+      displayIds: settings.fullscreenBreakMonitors,
     });
-  }, [send, settings.alwaysOnTop, shouldFullscreen]);
+  }, [
+    send,
+    settings.alwaysOnTop,
+    settings.fullscreenBreakMonitors,
+    shouldFullscreen,
+  ]);
 
   useEffect(() => {
     send(SET_COMPACT_MODE, {

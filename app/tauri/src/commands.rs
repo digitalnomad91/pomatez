@@ -65,6 +65,7 @@ fn set_always_on_top<R: Runtime>(always_on_top: bool, window: tauri::Window<R>) 
 fn set_fullscreen_break<R: Runtime>(
     should_fullscreen: bool,
     always_on_top: bool,
+    _display_ids: Option<Vec<i32>>,
     window: tauri::Window<R>,
 ) {
     println!(

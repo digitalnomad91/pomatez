@@ -5,6 +5,7 @@ import {
   globalShortcut,
   Tray,
   app,
+  screen,
 } from "electron";
 import path from "path";
 
@@ -137,7 +138,68 @@ describe("Fullscreen break", () => {
     expect(traySpies.setContextMenu).toHaveBeenCalledTimes(1);
   });
 
+  it("should create overlays for additional displays", () => {
+    const window = new BrowserWindow();
+    const tray = new Tray(
+      path.join(__dirname, "../../assets/tray-dark.png")
+    );
+    const trayTooltip = "Mock tray tool tip";
+    const overlayWindows = new Map<number, BrowserWindow>();
+
+    const displayOne: any = {
+      id: 1,
+      bounds: { x: 0, y: 0, width: 100, height: 100 },
+    };
+    const displayTwo: any = {
+      id: 2,
+      bounds: { x: 100, y: 0, width: 100, height: 100 },
+    };
+
+    jest
+      .spyOn(screen, "getAllDisplays")
+      .mockReturnValue([displayOne, displayTwo]);
+    jest.spyOn(screen, "getDisplayMatching").mockReturnValue(displayOne);
+
+    setFullscreenBreakHandler(
+      {
+        shouldFullscreen: true,
+        alwaysOnTop: true,
+        displayIds: [1, 2],
+      },
+      {
+        win: window,
+        contextMenu: Menu.buildFromTemplate([{ label: "Mock Label" }]),
+        isFullscreen: false,
+        trayTooltip,
+        tray,
+        overlayWindows,
+      }
+    );
+
+    expect(overlayWindows.size).toEqual(1);
+    expect(overlayWindows.has(2)).toBe(true);
+
+    setFullscreenBreakHandler(
+      {
+        shouldFullscreen: false,
+        alwaysOnTop: true,
+        displayIds: [1, 2],
+      },
+      {
+        win: window,
+        contextMenu: Menu.buildFromTemplate([{ label: "Mock Label" }]),
+        isFullscreen: true,
+        trayTooltip,
+        tray,
+        overlayWindows,
+      }
+    );
+
+    expect(overlayWindows.size).toEqual(0);
+  });
+
   afterEach(() => {
+    jest.restoreAllMocks();
     globalShortcut.unregisterAll();
     app.quit();
   });
