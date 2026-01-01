@@ -315,44 +315,45 @@ const FeatureSection: React.FC = () => {
           { id, label, checked, onChange, disabled = false, ...rest },
           index
         ) => (
-          <Toggler
-            id={id}
-            key={index}
-            label={label}
-            checked={checked}
-            disabled={disabled}
-            onChange={onChange}
-            {...rest}
-          />
-        )
-      )}
-      {settings.enableFullscreenBreak && (
-        <StyledMonitorWrapper>
-          <StyledMonitorHeader>
-            <span>Fullscreen Break Monitors</span>
-            {monitorSelectionDisabled && (
-              <StyledMonitorHint>Disabled</StyledMonitorHint>
-            )}
-          </StyledMonitorHeader>
-          {monitorOptions.length ? (
-            <StyledMonitorList aria-disabled={monitorSelectionDisabled}>
-              {monitorOptions.map((monitor) => (
-                <Checkbox
-                  key={monitor.id}
-                  id={`fullscreen-monitor-${monitor.id}`}
-                  label={monitor.label}
-                  checked={settings.fullscreenBreakMonitors.includes(
-                    monitor.id
+          <React.Fragment key={index}>
+            <Toggler
+              id={id}
+              label={label}
+              checked={checked}
+              disabled={disabled}
+              onChange={onChange}
+              {...rest}
+            />
+            {id === "fullscreen-break" && settings.enableFullscreenBreak && (
+              <StyledMonitorWrapper>
+                <StyledMonitorHeader>
+                  <span>Fullscreen Break Monitors</span>
+                  {monitorSelectionDisabled && (
+                    <StyledMonitorHint>Disabled</StyledMonitorHint>
                   )}
-                  disabled={monitorSelectionDisabled}
-                  onChange={() => onToggleMonitor(monitor.id)}
-                />
-              ))}
-            </StyledMonitorList>
-          ) : (
-            <StyledMonitorHint>No monitors detected.</StyledMonitorHint>
-          )}
-        </StyledMonitorWrapper>
+                </StyledMonitorHeader>
+                {monitorOptions.length ? (
+                  <StyledMonitorList aria-disabled={monitorSelectionDisabled}>
+                    {monitorOptions.map((monitor) => (
+                      <Checkbox
+                        key={monitor.id}
+                        id={`fullscreen-monitor-${monitor.id}`}
+                        label={monitor.label}
+                        checked={settings.fullscreenBreakMonitors.includes(
+                          monitor.id
+                        )}
+                        disabled={monitorSelectionDisabled}
+                        onChange={() => onToggleMonitor(monitor.id)}
+                      />
+                    ))}
+                  </StyledMonitorList>
+                ) : (
+                  <StyledMonitorHint>No monitors detected.</StyledMonitorHint>
+                )}
+              </StyledMonitorWrapper>
+            )}
+          </React.Fragment>
+        )
       )}
       <Collapse>
         <Radio

@@ -25,13 +25,18 @@ type AppArgs = {
   preloadPath: string;
 };
 
+let previousBounds: Electron.Rectangle | null = null;
+let previousResizable: boolean | null = null;
+
 const setFullScreen = (
   flag: boolean,
   alwaysOnTop: boolean,
   win: BrowserWindow | null,
   isFullscreen: FullscreenState["isFullscreen"]
 ) => {
-  win?.setResizable(flag);
+  if (flag) {
+    win?.setResizable(true);
+  }
   win?.setFullScreenable(true);
   win?.setAlwaysOnTop(alwaysOnTop, "screen-saver");
   win?.setSkipTaskbar(flag);
@@ -165,14 +170,16 @@ export const setFullscreenBreakHandler = (
       : [];
 
   const primaryDisplay = resolvedTargets[0];
-
   if (shouldFullscreen) {
-    if (
-      win &&
-      primaryDisplay &&
-      (!currentDisplay || primaryDisplay.id !== currentDisplay.id)
-    ) {
-      win.setBounds(primaryDisplay.bounds);
+    if (win) {
+      previousBounds = win.getBounds();
+      previousResizable = win.isResizable();
+      if (
+        primaryDisplay &&
+        (!currentDisplay || primaryDisplay.id !== currentDisplay.id)
+      ) {
+        win.setBounds(primaryDisplay.bounds);
+      }
     }
 
     setFullScreen(true, alwaysOnTop, win, isFullscreen);
@@ -199,6 +206,12 @@ export const setFullscreenBreakHandler = (
   } else {
     setFullScreen(false, alwaysOnTop, win, isFullscreen);
     closeOverlayWindows(overlayWindows);
+    if (win) {
+      if (previousBounds) {
+        win.setBounds(previousBounds);
+      }
+      win.setResizable(previousResizable ?? true);
+    }
 
     deactivateFullScreenShortcuts();
     tray?.setToolTip(trayTooltip);
